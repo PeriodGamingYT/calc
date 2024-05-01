@@ -40,10 +40,11 @@ typedef struct {
 } token_t;
 
 void rewind_stdin(int amount, char *push_back) {
+printf("rewinded push back is '");for(int i=0;i<amount;i++){fputc(push_back[i],stdout);}printf("' on line %d\n",__LINE__);
 
 	// fseek doesn't work for some reason
 	for(int i = 0; i < amount; i++) {
-		ungetc(push_back[amount - i - 1], stdin);
+		ungetc(push_back[i], stdin);
 	}
 }
 
@@ -52,16 +53,23 @@ void rewind_stdin(int amount, char *push_back) {
 int is_last_newline = 0;
 char get_char() {
 	char input[2] = { 0 };
-	while(fgets(input, sizeof(input), stdin) == NULL) {
+
+	// 2 because fgets null terminates
+	while(fgets(input, 2, stdin) == NULL) {
 		if(is_last_newline) {
 			return EOF;
 		}
 	}
 
+// test input with "(9)" whitespace is buggy
+printf("input is '%s' on line %d\n", input, __LINE__);
+//if(input[0]=='9'){printf("hang on line %d\n",__LINE__);for(;;);}
+printf("input[0] is %d, input[1] is %d on line %d\n", input[0], input[1], __LINE__);
 	if(input[0] == '\n' || input[0] == '\r') {
+printf("newline triggered at line %d\n", __LINE__);
 		is_last_newline = 1;
 	}
-	
+
 	return input[0];
 }
 
@@ -144,7 +152,7 @@ void fetch_int(int *num) {
 	*num = result;
 }
 
-void fetch_float(float *num) {
+float fetch_float() {
 	int int_part = 0;
 	int deci_part = 0;
 	fetch_int(&int_part);
@@ -155,9 +163,15 @@ void fetch_float(float *num) {
 		rewind_stdin(1, &test_char);
 	}
 
-	*num = (
-		(float)(int_part) + 
-		(float)(power_ten_fit_int(deci_part))
+	float deci_part_float = deci_part == 0 
+		? 0
+		: (
+			(float)(deci_part) / 
+			(float)(power_ten_fit_int(deci_part))
+		);
+	
+	return (
+		(float)(int_part) + deci_part_float
 	);
 }
 
@@ -178,7 +192,7 @@ int str_first_space(char *str) {
 #define ARRAY_SIZE(_array) \
 	((int)(sizeof(_array) / sizeof((_array)[0])))
 
-void fetch_oper(token_oper_e *oper) {
+token_oper_e fetch_oper() {
 	token_oper_e char_to_oper[] = {
 		TOKEN_OPER_ADD,
 		TOKEN_OPER_SUB,
@@ -227,14 +241,17 @@ void fetch_oper(token_oper_e *oper) {
 	char oper_buf[OPER_CHAR_MAX + 1] = { 0 };
 	for(int i = 0; i < OPER_CHAR_MAX; i++) {
 		oper_buf[i] = get_char();
-		if(oper_buf[i] == '\n' || oper_buf[i] == '\r') {
-			*oper = TOKEN_OPER_STOP;
-			return;
+		if(
+			oper_buf[i] == '\n' || 
+			oper_buf[i] == '\r' || 
+			oper_buf[i] == EOF
+		) {
+			break;
 		}
 	}
 
+	token_oper_e oper = TOKEN_OPER_STOP;
 	int max_oper = -1;
-	*oper = TOKEN_OPER_STOP;
 	for(int i = 0; i < ARRAY_SIZE(char_oper); i++) {
 		char *oper_str = char_oper[i];
 		int first_space = str_first_space(oper_str);
@@ -250,17 +267,34 @@ void fetch_oper(token_oper_e *oper) {
 			first_space > max_oper
 		) {
 			max_oper = first_space;
-			*oper = char_to_oper[i];
+			oper = char_to_oper[i];
 		}
 
 		oper_buf[first_space] = temp_val_buf;
 		oper_str[first_space] = temp_val_str;
 	}
 
-	rewind_stdin(OPER_CHAR_MAX - max_oper - 1, oper_buf);
-	if(max_oper == -1) {
-		*oper = TOKEN_OPER_STOP;
+printf("oper char max is %d, max oper is %d on line %d\n", OPER_CHAR_MAX, max_oper, __LINE__);
+printf("oper buf is '%s' on line %d\n", oper_buf, __LINE__);
+printf("hang on line %d\n", __LINE__); for(;;){}
+	for(
+		int i = 0, 
+		j = OPER_CHAR_MAX - 1; 
+		i < (int)(OPER_CHAR_MAX / 2); 
+		i++, 
+		j--
+	) {
+		char temp = oper_buf[i];
+		oper_buf[i] = oper_buf[j];
+		oper_buf[i] = temp;
 	}
+	
+	rewind_stdin(OPER_CHAR_MAX - max_oper, oper_buf);
+	if(max_oper == -1) {
+		oper = TOKEN_OPER_STOP;
+	}
+
+	return oper;
 }
 
 void skip_whitespace() {
@@ -271,12 +305,16 @@ void skip_whitespace() {
 	) {
 		test_char = get_char();
 	}
-	
+
+printf("test char is '%c' on line %d\n", test_char, __LINE__);
 	if(
 		test_char != ' ' && 
 		test_char != '\t' &&
 		test_char != EOF
 	) {
+printf("rewinded stdin by 1 on line %d\n", __LINE__);
+
+		// seems like stdin sometimes doesn't rewind
 		rewind_stdin(1, &test_char);
 	}
 }
@@ -292,21 +330,18 @@ token_t fetch_token() {
 	) {
 		token.type = TOKEN_TYPE_OPER;
 		token.data.oper = TOKEN_OPER_STOP;
-		skip_whitespace();
 		return token;
 	}
 
 	rewind_stdin(1, &test_char);
 	if(test_char >= '0' && test_char <= '9') {
 		token.type = TOKEN_TYPE_NUM;
-		fetch_float(&token.data.num);
-		skip_whitespace();
+		token.data.num = fetch_float();
 		return token;
 	}
 
 	token.type = TOKEN_TYPE_OPER;
-	fetch_oper(&token.data.oper);
-	skip_whitespace();
+	token.data.oper = fetch_oper();
 	return token;
 }
 
@@ -337,6 +372,7 @@ float binary_oper(float first_param) {
 		case TOKEN_OPER_LESS: return first_param < uniary_oper();
 		case TOKEN_OPER_MORE: return first_param > uniary_oper();
 		case TOKEN_OPER_STOP: return first_param;
+		case TOKEN_OPER_CLOSE_PAREN: return first_param;
 		default: printf("couldn't find binary operator after number\n"); exit(1); break;
 	}
 }
@@ -376,6 +412,8 @@ float uniary_oper() {
 			}
 		}
 	}
+
+	return 0;
 }
 
 void setup_term() {
