@@ -322,8 +322,6 @@ void skip_whitespace() {
 		test_char != '\t' &&
 		test_char != EOF
 	) {
-
-		// seems like stdin sometimes doesn't rewind
 		rewind_stdin(1, &test_char);
 	}
 }
