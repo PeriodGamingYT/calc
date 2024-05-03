@@ -1,0 +1,15 @@
+i made this calculator because i felt unsatisified with my old one.
+this is mainly made for my personal needs, i want to have a basic, easy to use calculator
+in my terminal ready on demand.
+
+so, i built one, but i also didn't want to use my old codebase as i feel the quality of that
+and the design decisions are ones i would not make today.
+
+it's a basic evaluator, parenthesis and uniary operations are prioritized above every binary 
+expressions, which means that it will go left to right no matter what for binary expressions,
+beware!
+
+anyway, i try to avoid having to rely on order of operations in my code to make it clear how i 
+want my math to work for everyone.
+
+if this helps you, then suit yourself!
