@@ -40,9 +40,11 @@ typedef struct {
 } token_t;
 
 void rewind_stdin(int amount, char *push_back) {
-printf("rewinded push back is '");for(int i=0;i<amount;i++){fputc(push_back[i],stdout);}printf("' on line %d\n",__LINE__);
 
-	// fseek doesn't work for some reason
+	// fseek doesn't work because stdin can't go backwards since linux doesn't
+	// store the "history" of stdin. fseek will try and use the buffer but since
+	// we don't have that we can't do that. we have to insert it in with ungetc().
+	// yes, it is a hack, but an essential one that makes this project work
 	for(int i = 0; i < amount; i++) {
 		ungetc(push_back[i], stdin);
 	}
@@ -61,12 +63,7 @@ char get_char() {
 		}
 	}
 
-// test input with "(9)" whitespace is buggy
-printf("input is '%s' on line %d\n", input, __LINE__);
-//if(input[0]=='9'){printf("hang on line %d\n",__LINE__);for(;;);}
-printf("input[0] is %d, input[1] is %d on line %d\n", input[0], input[1], __LINE__);
 	if(input[0] == '\n' || input[0] == '\r') {
-printf("newline triggered at line %d\n", __LINE__);
 		is_last_newline = 1;
 	}
 
@@ -274,9 +271,6 @@ token_oper_e fetch_oper() {
 		oper_str[first_space] = temp_val_str;
 	}
 
-printf("oper char max is %d, max oper is %d on line %d\n", OPER_CHAR_MAX, max_oper, __LINE__);
-printf("oper buf is '%s' on line %d\n", oper_buf, __LINE__);
-printf("hang on line %d\n", __LINE__); for(;;){}
 	for(
 		int i = 0, 
 		j = OPER_CHAR_MAX - 1; 
@@ -286,7 +280,7 @@ printf("hang on line %d\n", __LINE__); for(;;){}
 	) {
 		char temp = oper_buf[i];
 		oper_buf[i] = oper_buf[j];
-		oper_buf[i] = temp;
+		oper_buf[j] = temp;
 	}
 	
 	rewind_stdin(OPER_CHAR_MAX - max_oper, oper_buf);
@@ -306,13 +300,11 @@ void skip_whitespace() {
 		test_char = get_char();
 	}
 
-printf("test char is '%c' on line %d\n", test_char, __LINE__);
 	if(
 		test_char != ' ' && 
 		test_char != '\t' &&
 		test_char != EOF
 	) {
-printf("rewinded stdin by 1 on line %d\n", __LINE__);
 
 		// seems like stdin sometimes doesn't rewind
 		rewind_stdin(1, &test_char);
@@ -353,7 +345,7 @@ float binary_oper(float first_param) {
 		exit(1);
 		return 0;
 	}
-
+	
 	token_oper_e oper = token.data.oper;
 	switch(oper) {
 		case TOKEN_OPER_ADD: return first_param + uniary_oper();
@@ -388,7 +380,6 @@ float uniary_oper() {
 		case TOKEN_TYPE_OPER: {
 			token_oper_e oper = token.data.oper;
 			switch(oper) {
-				case TOKEN_OPER_ADD: return uniary_oper();
 				case TOKEN_OPER_SUB: return -uniary_oper();
 				case TOKEN_OPER_NOT: return ~(int)(uniary_oper());
 				case TOKEN_OPER_BOOL_NOT: return !(int)(uniary_oper());
