@@ -70,6 +70,20 @@ char get_char() {
 	return input[0];
 }
 
+// a hack so the program doesn't get hung on invalid
+// inputs, it will just clear it and move on to the next thing
+void clear_stdin() {
+	char input[2] = { 0 };
+
+	// 2 because fgets null terminates
+	while(
+		fgets(input, 2, stdin) != NULL &&
+		input[0] != '\n' &&
+		input[0] != '\r' &&
+		input[0] != EOF
+	);
+}
+
 void print_token(token_t token) {
 	char *type_to_str[] = {
 		"number",
@@ -283,9 +297,12 @@ token_oper_e fetch_oper() {
 		oper_buf[j] = temp;
 	}
 	
-	rewind_stdin(OPER_CHAR_MAX - max_oper, oper_buf);
 	if(max_oper == -1) {
 		oper = TOKEN_OPER_STOP;
+		clear_stdin();
+		is_last_newline = 1;
+	} else {
+		rewind_stdin(OPER_CHAR_MAX - max_oper, oper_buf);
 	}
 
 	return oper;
