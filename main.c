@@ -150,7 +150,7 @@ int power_ten_fit_int(int to_fit) {
 	return exponent;
 }
 
-void fetch_int(int *num) {
+int fetch_int() {
 	int result = 0;
 	char int_char = get_char();
 	while(int_char >= '0' && int_char <= '9') {
@@ -160,16 +160,16 @@ void fetch_int(int *num) {
 	}
 
 	rewind_stdin(1, &int_char);
-	*num = result;
+	return result;
 }
 
 float fetch_float() {
 	int int_part = 0;
 	int deci_part = 0;
-	fetch_int(&int_part);
+	int_part = fetch_int();
 	char test_char = get_char();
 	if(test_char == '.') {
-		fetch_int(&deci_part);
+		deci_part = fetch_int();
 	} else {
 		rewind_stdin(1, &test_char);
 	}
