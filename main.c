@@ -352,6 +352,11 @@ token_t fetch_token() {
 	return token;
 }
 
+typedef struct {
+	float result;
+	int is_stop;
+} value_t;
+
 float uniary_oper();
 float binary_oper(float first_param) {
 	token_t token = fetch_token();
@@ -360,7 +365,7 @@ float binary_oper(float first_param) {
 		exit(1);
 		return 0;
 	}
-	
+
 	token_oper_e oper = token.data.oper;
 	switch(oper) {
 		case TOKEN_OPER_ADD: return first_param + uniary_oper();
@@ -378,10 +383,11 @@ float binary_oper(float first_param) {
 		case TOKEN_OPER_MORE_EQUAL: return first_param >= uniary_oper();
 		case TOKEN_OPER_LESS: return first_param < uniary_oper();
 		case TOKEN_OPER_MORE: return first_param > uniary_oper();
-		case TOKEN_OPER_STOP: return first_param;
-		case TOKEN_OPER_CLOSE_PAREN: return first_param;
+		case TOKEN_OPER_CLOSE_PAREN: case TOKEN_OPER_STOP: return first_param;
 		default: printf("couldn't find binary operator after number\n"); exit(1); break;
 	}
+
+	return 0;
 }
 
 float uniary_oper() {
@@ -400,20 +406,13 @@ float uniary_oper() {
 				case TOKEN_OPER_BOOL_NOT: return !(int)(uniary_oper());
 				case TOKEN_OPER_OPEN_PAREN: {
 					float result = uniary_oper();
-					token_t close_token = fetch_token();
-					if(
-						close_token.type != TOKEN_TYPE_OPER && 
-						close_token.data.oper != TOKEN_OPER_CLOSE_PAREN
-					) {
-						printf("couldn't find closing parenthesis\n");
-						exit(1);
-						break;
-					}
 
-					return result;
+					// the binary_oper that calls us here will handle the 
+					// closing parenthesis, can't really fix with stdin
+					return binary_oper(result);
 				}
 
-				case TOKEN_OPER_STOP: return 0;
+				case TOKEN_OPER_STOP: printf("unexpected stop"); exit(1); break;
 				default: printf("couldn't find number or uniary operator\n"); exit(1); break;
 			}
 		}
