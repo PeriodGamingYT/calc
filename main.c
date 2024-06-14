@@ -418,7 +418,7 @@ float uniary_oper() {
 					token_t test_token = fetch_token();
 					if(
 						test_token.type != TOKEN_TYPE_OPER || 
-						test_token.data.oper == TOKEN_OPER_CLOSE_PAREN
+						test_token.data.oper != TOKEN_OPER_CLOSE_PAREN
 					) {
 						printf("can't find closing parenthesis\n");
 						exit(1);
