@@ -398,23 +398,36 @@ float binary_oper(float first_param) {
 	return 0;
 }
 
-float uniary_oper() {
+// allow_binary is here to enforce the fact that !1 + 2 == (!1) + 2
+float uniary_oper(int allow_binary) {
 	token_t token = fetch_token();
 	switch(token.type) {
 		case TOKEN_TYPE_NUM: {
 			float first_param = token.data.num;
-			return binary_oper(first_param);
+			return allow_binary
+				? binary_oper(first_param)
+				: first_param;
 		}
 
 		case TOKEN_TYPE_OPER: {
 			token_oper_e oper = token.data.oper;
+			float inner_result = 0;
+			if(
+				oper == TOKEN_OPER_SUB ||
+				oper == TOKEN_OPER_NOT ||
+				oper == TOKEN_OPER_BOOL_NOT
+			) {
+				inner_result = uniary_oper(0);
+			}
+
+			float return_result = 0;
 			switch(oper) {
-				case TOKEN_OPER_SUB: return -uniary_oper();
-				case TOKEN_OPER_NOT: return ~(int)(uniary_oper());
-				case TOKEN_OPER_BOOL_NOT: return !(int)(uniary_oper());
+				case TOKEN_OPER_SUB: return_result = -inner_result; break;
+				case TOKEN_OPER_NOT: return_result = ~(int)(inner_result); break;
+				case TOKEN_OPER_BOOL_NOT: return_result = !(int)(inner_result); break;
 				case TOKEN_OPER_OPEN_PAREN: {
-					float first = uniary_oper();
-					float result = binary_oper(first);
+					float first = uniary_oper(1);
+					return_result = binary_oper(first);
 					token_t test_token = fetch_token();
 					if(
 						test_token.type != TOKEN_TYPE_OPER || 
@@ -424,12 +437,16 @@ float uniary_oper() {
 						exit(1);
 					}
 
-					return result;
+					break;
 				}
 
 				case TOKEN_OPER_STOP: printf("unexpected stop\n"); exit(1); break;
 				default: printf("couldn't find number or uniary operator\n"); exit(1); break;
 			}
+
+			return allow_binary
+				? binary_oper(return_result)
+				: return_result;
 		}
 	}
 
@@ -443,13 +460,14 @@ void setup_term() {
 	int flags = fcntl(desc, F_GETFL, 0);
 	flags |= O_NONBLOCK;
 	fcntl(desc, F_SETFL, flags);
+	atexit(clear_stdin);
 }
 
 int main() {
 	setup_term();
 	for(;;) {
 		is_last_newline = 0;
-		float result = uniary_oper();
+		float result = uniary_oper(1);
 		printf("result: %f\n\n", result);
 	}
 	
