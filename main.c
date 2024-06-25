@@ -426,8 +426,7 @@ float uniary_oper(int allow_binary) {
 				case TOKEN_OPER_NOT: return_result = ~(int)(inner_result); break;
 				case TOKEN_OPER_BOOL_NOT: return_result = !(int)(inner_result); break;
 				case TOKEN_OPER_OPEN_PAREN: {
-					float first = uniary_oper(1);
-					return_result = binary_oper(first);
+					return_result = uniary_oper(1);
 					token_t test_token = fetch_token();
 					if(
 						test_token.type != TOKEN_TYPE_OPER || 
